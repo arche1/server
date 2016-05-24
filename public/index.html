@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+    .chat_log{ width: 95%; height: 200px; }
+    .name{ width: 10%; }
+    .message{ width: 70%; }
+    .chat{ width: 10%; }
+    </style>
+    <meta charset="utf-8">
+    <title></title>
+  </head>
+  <body>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="//code.jquery.com/jquery-1.11.1.js"></script>
+    <script>
+    $(function(){
+
+
+
+
+      var GAME_SETTINGS = null;
+
+      var canvas = document.createElement('canvas');
+      var ctx = canvas.getContext("2d");
+      $(canvas).css("display", "block");
+      $(canvas).css("border", "black 1px solid");
+      $(canvas).css("margin", "0 auto");
+
+      var socket = io();
+
+      $('#chat').on('submit', function(e){
+        socket.emit('send message', $('#name').val(), $('#message').val());
+        $('#message').val("");
+        e.preventDefault();
+      });
+
+      socket.on('receive message', function(msg){
+         $('#chatLog').append(msg+"\n");
+         $('#chatLog').scrollTop($('#chatLog').innerHeight())
+       });
+
+       socket.on('change name', function(name){
+          $('#name').val(name);
+        });
+
+
+      $('body').on('keydown', function(e){
+        socket.emit('keydown', e.keyCode)
+      });
+
+      $('body').on('keyup', function(e){
+        socket.emit('keyup', e.keyCode)
+      });
+
+      socket.on('connected', function(SERVER_GAME_SETTINGS){
+        GAME_SETTINGS = SERVER_GAME_SETTINGS;
+        $(canvas).attr("width", GAME_SETTINGS.WIDTH);
+        $(canvas).attr("height", GAME_SETTINGS.HEIGHT);
+        document.body.appendChild(canvas);
+      });
+      socket.on('update', function(statuses){
+
+        if(GAME_SETTINGS == null) return;
+        drawBackground();
+        statuses.forEach(function(status){
+
+          var img = new Image();
+
+          img.src = status.character + ".jpg"
+          console.log(status.character+".jpg")
+          ctx.drawImage(img, status.x,status.y,status.width,status.height);
+
+          ctx.fillStyle = "black";
+          ctx.font ="12px dotum";
+          ctx.fillText(status.user,status.x,status.y)
+        });
+      });
+
+      function drawBackground(){
+        ctx.fillStyle = GAME_SETTINGS.BACKGROUND_COLOR;
+        ctx.fillRect(0,0,GAME_SETTINGS.WIDTH,GAME_SETTINGS.HEIGHT);
+      }
+
+      socket.on('waiting', function(){
+        console.log("I'm waiting!");
+      });
+
+      socket.on('in', function(){
+        console.log("I'm in!");
+      });
+    })
+    </script>
+
+    <div>
+  <textarea id="chatLog" class="chat_log" readonly></textarea>
+</div>
+<form id="chat">
+  <input id="name" class="name" type="text" readonly>
+  <input id="message" class="message" type="text">
+  <input type="submit" class="chat" value="chat"/>
+</form>
+<div id="box" class="box">
+  </body>
+</html>
